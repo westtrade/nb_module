@@ -1,0 +1,1853 @@
+<?php
+
+/*
+	TODO: ADD This модуль и токен
+*/
+
+function nbmod_variable_info($options) {
+
+	$variable['nbmod_phone_1'] = array(
+		'title' => 'Телефон',
+		'type' => 'string',
+		'description' => "Сокращенная версия 1-го номера телефона в контактах",
+		// 'token' => TRUE,
+	);
+
+	$variable['nbmod_phone_1_full'] = array(
+		'title' => 'Полный номер телефона',
+		'type' => 'string',
+		'description' => "Телефон в полном формате, для звонков с помощью скайпа",
+		// 'token' => TRUE,
+	);
+
+	$variable['nbmod_copyright'] = array(
+		'title' => 'Строка копирайта в футере',
+		'type' => 'string',
+		'description' => "",
+		// 'token' => TRUE,
+	);
+
+	$variable['nbmod_slogan'] = array(
+		'title' => 'Слоган в футере',
+		'type' => 'string',
+		'description' => "",
+		// 'token' => TRUE,
+	);
+
+
+	$variable['nbmod_email'] = array(
+		'title' => 'Email в футере',
+		'type' => 'string',
+		'description' => "",
+		// 'token' => TRUE,
+	);
+
+	$variable['nbmod_emails'] = array(
+		'title' => 'Почта для получения заявок на предзаказ',
+		'type' => 'string',
+		'description' => "Может быть как один адрес, так и несколько разделенные запятыми.",
+		// 'token' => TRUE,
+	);
+
+	$variable['nbmod_instagram_url'] = array(
+		'title' => "Ссылка на профиль в Instagram",
+		'type' => 'string',
+		// 'token' => TRUE,
+	);
+
+	$variable['nbmod_youtube_url'] = array(
+		'title' => "Ссылка на Yotube канал",
+		'type' => 'string',
+		// 'token' => TRUE,
+	);
+
+
+	$variable['nbmod_vk_url'] = array(
+		'title' => "Ссылка на группу вконтакте",
+		'type' => 'string',
+		// 'token' => TRUE,
+	);
+
+
+	$variable['nbmod_facebook_url'] = array(
+		'title' => "Ссылка на группу в Facebook",
+		'type' => 'string',
+		// 'token' => TRUE,
+	);
+
+	return $variable;
+}
+
+
+
+
+function nbmod_preorder_form ($form, &$form_state) {
+
+
+	$form['#action'] = "#order_form";
+
+	if( arg(0) === 'node' && is_numeric( arg(1) ) ) {
+
+		$node = node_load( arg(1) );
+
+
+		$form['type_title'] = array(
+			'#type' => 'markup',
+			'#markup' => t('Pre-Order'),
+
+			'#suffix' => '</h1>',
+			'#prefix' => '<h1>'
+		);
+
+		$form['product_title'] = array(
+			'#type' => 'markup',
+			'#markup' => t('on @title', array( '@title' =>  $node->title ) ),
+			'#suffix' => '</h3>',
+			'#prefix' => '<h3>'
+		);
+
+
+
+		$form['messages'] = array(
+			'#type' => 'markup',
+			'#markup' => '__messages__',
+		);
+	}
+
+	$form['full_name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Full name'),
+		'#requred' => true
+	);
+
+
+	$form['email'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Email'),
+	);
+
+	$form['phone'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Phone'),
+		'#attributes' => array(
+			'placeholder' => t('format: +7 (495) 200-00-00')
+		),
+		'#requred' => true
+	);
+
+
+	$form['node_id'] = array(
+		'#type' => 'hidden',
+		'#requred' => true,
+		'#default_value' => arg(1)
+	);
+
+
+	$form['description'] = array(
+		'#type' => 'textarea',
+		'#title' => t('Description'),
+		'#resizable' => false
+	);
+
+
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => t('Pre-Order now'),
+		'#attributes' => array(
+			'class' => array('btn-lg')
+		),
+
+		'#ajax' => array(
+			'callback' => 'nbmod_preorder_form_ajax_submit',
+			'wrapper' => 'nbmod-preorder-form',
+			'method' => 'replace',
+			'effect' => 'fade',
+		)
+	);
+
+	// $form['#submit'][] = 'nbmod_preorder_form_submit';
+
+
+	// $form_state['rebuild'] = TRUE;
+
+	return $form;
+}
+
+
+
+function nbmod_preorder_form_ajax_submit($form, &$form_state) {
+
+	drupal_validate_form('nbmod_preorder_form', $form, $form_state);
+
+	if (form_get_errors()) {
+		$form_state['rebuild'] = TRUE;
+
+		$messages = theme_status_messages(array( 'display' => 'error' ));
+		$messages = !empty( $messages ) ? "<div class=\"alert alert-block alert-danger\">{$messages}</div>" : $messages;
+
+		$success_messages = theme_status_messages(array( 'display' => 'status' ));
+		$success_messages = !empty( $success_messages ) ? "<div class=\"alert alert-block alert-success\">{$success_messages}</div>" : $success_messages;
+
+		$form['messages']['#markup'] = $messages.$success_messages;
+
+		return $form;
+	}
+
+
+	// nbmod_preorder_form_submit($form, $form_state);
+
+	$form_state['rebuild'] = TRUE;
+
+
+	$output = array(
+		'#markup' => "<div class=\"alert alert-block alert-success\">".t("Pre-Order is successfully created.")."</div>"
+	);
+
+
+	return $output;
+}
+
+
+
+
+function nbmod_preorder_form_validate ($form, $form_state) {
+
+	if (form_get_errors()) return;
+	if ( empty($form_state['values']['full_name']) || strlen( $form_state['values']['full_name'] ) < 4  ) {
+		form_set_error('full_name', t('Field @field_name is required.', array( '@field_name' => t('Full name') ) ));
+	}
+
+	if ( empty($form_state['values']['email']) || strlen( $form_state['values']['email'] ) < 4 ) {
+		form_set_error('email', t('Field @field_name is required.', array( '@field_name' => t('Email') ) ));
+	}
+
+	elseif ( !filter_var( $form_state['values']['email'], FILTER_VALIDATE_EMAIL ) ) {
+		form_set_error('email', t('Field @field_name must be in email format.', array( '@field_name' => t('Email') ) ));
+	}
+
+
+
+
+	if ( empty($form_state['values']['phone']) || strlen( $form_state['values']['phone'] ) < 4 ) {
+		form_set_error('phone', t('Field @field_name is required.', array( '@field_name' => t('Phone') ) ));
+	}
+
+	elseif( !preg_match('/^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$/', $form_state['values']['phone'])  )  {
+		form_set_error('phone', t('Field @field_name must be in @format.', array( '@field_name' => t('Phone'), '@format' => t('phone number format') ) ));
+	}
+
+
+}
+
+
+function nbmod_preorder_form_submit ($form, &$form_state) {
+
+	global $language;
+
+	$node = new stdClass();
+	$node->type = "preorder_request";
+	$node->uid = 1;
+	$node->created  = time(); 
+	$node->updated  = time(); 
+
+	node_object_prepare($node);
+
+	$node->title    = t('Preorder request @full_name - @date', array( '@date' => format_date( time(), 'long' ), '@full_name' => $form_state['values']['full_name']  ));
+	$node->language = $language->language;
+	// $node->uid = 1;
+	$node->body[LANGUAGE_NONE][0]['value']   = $form_state['values']['description'];
+	$node->body[LANGUAGE_NONE][0]['format']  = 'filtered_html';
+
+	$node->field_mail[LANGUAGE_NONE][0]['value'] = $form_state['values']['email'];
+	$node->field_full_name[LANGUAGE_NONE][0]['value'] = $form_state['values']['full_name'];
+	$node->field_phone[LANGUAGE_NONE][0]['value'] = $form_state['values']['phone'];
+
+	$node->field_product_link[LANGUAGE_NONE][0]['target_id'] = $form_state['values']['node_id'];
+
+	// drupal_set_message(print_r($node, true), 'status', FALSE);
+
+	if($node = node_submit($node)) {
+		$node->uid = 1;
+		node_save($node);
+	}
+
+	$mail_content = node_view($node);
+
+	unset($mail_content['links']);
+	unset($mail_content['#contextual_links']);
+
+	$mail_content = render($mail_content);
+	$mail_content = strip_tags($mail_content);
+	$mail_content = preg_replace("/(\t|&nbsp;)/", ' ', $mail_content);
+	$mail_content = preg_replace("/[ ]+/", ' ', $mail_content);
+	$mail_content = preg_replace("/[\n]+/", "\n", $mail_content);
+
+	$to = variable_get_value('nbmod_emails');
+
+	if( !empty($to) ) mail($to, $node->title, $mail_content );
+
+	drupal_set_message(t("Pre-Order is successfully created."), 'status', FALSE);
+
+	$form_state['rebuild'] = TRUE;
+
+	$form_state['redirect'] = array(
+		"node/".$form_state['values']['node_id'], 
+		array( 'fragment' => 'product_page' )
+	);
+
+}
+
+
+
+
+
+
+// function nbmod_add_to_cart ($form, $form_state) {
+
+// 	if( arg(0) === 'node' && is_numeric( arg(1) ) ) {
+
+// 		$node = node_load( arg(1) );
+
+
+// 		$form['type_title'] = array(
+// 			'#type' => 'markup',
+// 			'#markup' => t('Checkout'),
+
+// 			'#suffix' => '</h1>',
+// 			'#prefix' => '<h1>'
+// 		);
+
+// 		$form['product_title'] = array(
+// 			'#type' => 'markup',
+// 			'#markup' => t('on @title', array( '@title' =>  $node->title ) ),
+// 			'#suffix' => '</h3>',
+// 			'#prefix' => '<h3>'
+// 		);
+
+
+
+// 		$form['messages'] = array(
+// 			'#type' => 'markup',
+// 			'#markup' => '__messages__',
+// 		);
+// 	}
+
+
+// 	$form['quantity'] = array(
+// 		'#type' => 'textfield',
+// 		'#title' => t('Quantity'),
+// 	);
+
+// 	$form['volume'] = array(
+// 		'#type' => 'textfield',
+// 		'#title' => t('The volume of the canister, liters'),
+// 	);
+
+// 	$form['submit'] = array(
+// 		'#type' => 'submit',
+// 		'#value' => t('Add to cart')
+// 	);
+
+// 	return $form;
+// }
+
+
+// function nbmod_add_to_cart_validate ($form, $form_state) {
+
+// 	// dpm($form);
+// }
+
+
+// function nbmod_add_to_cart_submit ($form, $form_state) {
+// 	// dpm($form);
+	
+// }
+
+
+
+
+/**
+ * Implements hook_token_info(). This hook will register tow token lname and fname.
+ */
+
+function nbmod_token_info() {
+
+	$info['tokens']['custom']['sociallink'] = array(
+		'name' => "Ссылка на социальную сеть",
+		'description' => "Упрощенная вставка виджетов - ссылок на социальные сети",
+	);
+
+	$info['tokens']['custom']['nbmodphone'] = array(
+		'name' => "Телефон",
+		'description' => "Упрощенная вставка виджета - телефон сайта",
+	);
+
+	return $info;
+}
+
+
+function nbmod_menu_breadcrumb_alter(&$active_trail, $item) {
+	$active_trail[0]['title'] = t('Front page');
+}
+
+
+function nbmod_page_alter(&$page) {
+
+	$arg_1  = arg(0);
+	$arg_2  = arg(1);
+
+
+	if ( $arg_1 == 'taxonomy' && $arg_2 == 'term' && is_numeric( arg(2) )  ) {
+
+
+		$term = taxonomy_term_load( intval( arg(2) ) );
+		$voc = taxonomy_vocabulary_load($term->vid);
+
+		$machine_name = !empty( $voc ) ? $voc->machine_name : '';
+
+		switch ( $machine_name ) {
+			case 'tags':
+					$view = views_get_view('news');
+					if($view && $view->access('page_2') ) views_add_contextual_links($page, 'page', $view, 'page_2');
+				break;
+
+			case 'cases':
+					$view = views_get_view('case_page');
+					if($view && $view->access('block') ) views_add_contextual_links($page, 'block', $view, 'block');
+				break;
+		}
+
+		// menu_tree_set_path('main-menu', 'news'); NOT WORK
+
+	}
+
+}
+
+function nbmod_preprocess_page(&$vars) {
+
+	$arg_1  = arg(0);
+	$arg_2  = arg(1);
+
+	if($arg_1 === 'news') {
+		drupal_set_title( t('News Nanobarrier') );
+		// menu_tree_set_path('main-menu', drupal_get_normal_path('news') );
+
+
+		if( !empty( $arg_2 )  && is_numeric( $arg_2 ) ) {
+
+			$arch_date = date_create_from_format('Ym', $arg_2);
+
+			if( !empty( $arch_date ) )drupal_set_title(
+
+				t('Archive').' : '.__get_month(
+
+					$arch_date->format('n')
+
+				).', '
+
+				.$arch_date->format('Y')
+			);
+
+			$breadcrumb = array();
+			$breadcrumb[] = l(t('Front page'), '<front>');
+			$breadcrumb[] = l(t('News'), 'news');
+			$breadcrumb[] = drupal_get_title();
+
+			drupal_set_breadcrumb($breadcrumb);
+
+		}
+	}
+
+	elseif ( $arg_1 == 'taxonomy' && $arg_2 == 'term' && is_numeric( arg(2) )  ) {
+
+		// menu_tree_set_path('main-menu', drupal_get_normal_path('news') );
+
+		$term = taxonomy_term_load((int) arg(2));
+		$voc = taxonomy_vocabulary_load($term->vid);
+
+		if( $voc->machine_name === 'tags') {
+			$vars['theme_hook_suggestions'][] = 'page__news';
+
+			drupal_set_title( t( 'By tag: @tag', array( '@tag' => $term->name ) ) );
+
+			$breadcrumb = array();
+			$breadcrumb[] = l(t('Front page'), '<front>');
+			$breadcrumb[] = l(t('News'), 'news');
+			$breadcrumb[] = drupal_get_title();
+
+			drupal_set_breadcrumb($breadcrumb);
+
+		}
+
+		else {
+			$vars['theme_hook_suggestions'][] = 'page__vocabulary__'.$voc->machine_name;
+			$vars['theme_hook_suggestions'][] = 'page__vocabulary__'.$voc->vid;
+		}
+
+	}
+
+	elseif( !drupal_is_front_page()  ) {
+		// dpm( menu_get_active_trail() );
+
+
+		$breadcrumb = array();
+		$breadcrumb[] = l(t('Front page'), '<front>');
+		$breadcrumb[] = drupal_get_title();
+
+		drupal_set_breadcrumb($breadcrumb);
+	}
+}
+
+
+
+/**
+ * Implements hook_ds_fields_info().
+ */
+function nbmod_ds_fields_info($entity_type) {
+	$fields = array();
+
+	$fields['node']['nbmod_nodelink'] = array(
+		'title' => t('Link to content integrates with commerce'),
+		'field_type' => DS_FIELD_TYPE_FUNCTION,
+		'function' => '__show_node_link',
+
+		'properties' => array(
+			'formatters' => array(
+				'btn_default' => t('Default'),
+				'btn_large' => t('Large'),
+				'btn_medium' => t('Medium'),
+				'btn_small' => t('Small'),
+			),
+	    ),
+
+	);
+
+
+
+	$fields['node']['nbmod_filefield_link'] = array(
+		'title' => t('Link to filefield'),
+		'field_type' => DS_FIELD_TYPE_FUNCTION,
+		'function' => '__show_file_link',
+		'properties' => array(),
+
+	);
+
+	if ( isset($fields[$entity_type]) ) {
+		return array($entity_type => $fields[$entity_type]);
+	}
+
+
+	return;
+}
+
+
+
+function __show_file_link ($field, $title = NULL ) {
+	$content = '';
+	$url_to_file = '';
+	$file = array();
+
+
+
+	if( $wrapper = entity_metadata_wrapper($field['entity_type'], $field['entity']) ) {
+
+		$files = $wrapper->field_attached_files->value();
+
+		if( count( $files ) ) {
+
+			if( count($files) == 1) $file = $files[0];
+			else {
+
+				foreach($files as $cfile ) {
+					$expl = explode('.' , $cfile['uri']);
+					$ext = $expl[ count($expl)  - 1 ];
+
+					if($ext === 'pdf') {
+						$file = $cfile;
+						break;
+					}
+				}
+
+				if( empty($file) ) $file = $files[0];
+			}
+		}
+	}
+
+	if($file) {
+		$url_to_file = file_create_url($file['uri']);
+
+		$content = l('<span class="file_icon pdf"></span>', 'http://docs.google.com/viewer?url='.$url_to_file, array( 'html' => true , 'attributes' => array( 'target' => '_blank' ) ));
+	}
+
+	return $content;
+}
+
+
+
+
+		
+
+function __product_is_preordered ($node_wrapper) {
+
+	$products = $node_wrapper->field_product ->value();
+	$preorder_status = $node_wrapper->field_preorder_status->value();
+	return !count($products) ?  true : false || !empty($preorder_status);
+
+}
+
+
+/**
+ * Render the article footnote field.
+ */
+function __show_node_link($field, $title = NULL) {
+
+
+	$content = '';
+
+	$size_class = '';
+
+	switch ( $field['formatter'] ) {
+		case 'btn_large' : $size_class = 'btn-lg'; break;
+		case 'btn_medium' : $size_class = 'btn-sm'; break;
+		case 'btn_small' : $size_class = 'btn-xs'; break;
+		default : $size_class = ''; break;
+	}
+
+
+	$link_params = array(
+		'label' => t('In stock'),
+		'html_class' =>  'btn-instock'
+	);
+
+
+	// dpm( $field['entity'] );
+
+	if( $wrapper = entity_metadata_wrapper($field['entity_type'], $field['entity']) ) {
+
+		$product = $wrapper->field_product ->value() ;
+
+		// if( $product && $prod_wrapper = entity_metadata_wrapper('commerce_product', $product)  ) {
+		// 	if ( $prod_wrapper->field_preorder_status->value() ) {
+		// 		$link_params['label'] = t('Preorder');
+		// 		$link_params['html_class'] = 'btn-preordered' ;
+		// 	}
+		// }
+
+		if( __product_is_preordered($wrapper) ) {
+			$link_params['label'] = t('Preorder');
+			$link_params['html_class'] = 'btn-preordered' ;
+		}
+
+
+		$content = l(
+			$link_params['label'],
+			'node/'.$wrapper->nid->value(),
+
+			array(
+				'attributes' => array (
+					'class' => array( $link_params['html_class'], 'btn', $size_class)
+				)
+			)
+		);
+
+	};
+
+	return $content;
+}
+
+
+
+
+
+
+function __get_month( $month = 1, $case = 0 ) {
+	$monthAr = array(
+		1 => array('Январь', 'Января'),
+		2 => array('Февраль', 'Февраля'),
+		3 => array('Март', 'Марта'),
+		4 => array('Апрель', 'Апреля'),
+		5 => array('Май', 'Мая'),
+		6 => array('Июнь', 'Июня'),
+		7 => array('Июль', 'Июля'),
+		8 => array('Август', 'Августа'),
+		9 => array('Сентябрь', 'Сентября'),
+		10=> array('Октябрь', 'Октября'),
+		11=> array('Ноябрь', 'Ноября'),
+		12=> array('Декабрь', 'Декабря')
+	);
+
+
+	return $monthAr[$month][$case];
+}
+
+
+function nbmod_preprocess_views_view (&$view) {
+
+
+	if($view['name'] === 'news') {
+		$breadcrumb = array();
+		$breadcrumb[] = l(t('Front page'), '<front>');
+		$breadcrumb[] = t('News');
+
+		// $breadcrumb[] = l(drupal_get_title(), base_path() . request_uri()); // Link to current URL
+		// Set Breadcrumbs
+
+		drupal_set_breadcrumb($breadcrumb);
+
+		// menu_tree_set_path('main-menu', drupal_get_normal_path('news') );
+
+	}
+
+}
+
+
+function nbmod_node_view($node, $view_mode, $langcode) {
+
+	if(!$view_mode === 'full') return;
+
+	if(arg(0) === 'node' && arg(1) === $node->nid) {
+
+		if($node->type === 'news') {
+
+			$breadcrumb = array();
+			$breadcrumb[] = l(t('Front page'), '<front>');
+			$breadcrumb[] = l(t('News'), 'news');
+			$breadcrumb[] = $node->title;
+
+			drupal_set_breadcrumb($breadcrumb);
+		}
+
+	}
+}
+
+
+
+
+/**
+ * Implements hook_tokens(). This hook will operate the token and replace it with it's value.
+ */
+function nbmod_tokens($type, $tokens, array $data = array(), array $options = array()) {
+		$replacements = array();
+		$sanitize = !empty($options['sanitize']);
+
+
+		if ($type == 'sociallink') {
+			foreach ($tokens as $name => $original) {
+
+				$spl = explode('|', $name);
+
+				$replacements[$original] = theme(
+					'nbmod_sociallink',
+					array(
+						'social_type' => $spl[0],
+						'link' => count($spl) > 1 ? $spl[1] : ''
+					)
+				);
+
+			}
+		}
+
+
+		if ($type == 'phone') {
+				foreach ($tokens as $name => $original) {
+					$phone_label =  variable_get_value('nbmod_phone_'.$name);
+
+					$phone_call =  "tel:".variable_get_value('nbmod_phone_'.$name.'_full');
+
+
+					$replacements[$original] = "<a class='phone' href='".$phone_call."'>{$phone_label}</a>";
+				}
+		}
+
+		if ($type == 'email') {
+				foreach ($tokens as $name => $original) {
+					$email =  variable_get_value('nbmod_email');
+					$replacements[$original] = "<a class='email' href='mailto:{$email}'>{$email}</a>";
+				}
+		}
+
+
+		return $replacements;
+}
+
+
+
+
+
+
+
+
+
+function nbmod_init() {
+	// dpm(variable_get('site_frontpage'));
+	variable_set('site_frontpage', 'frontpage' );
+    // db_query("UPDATE {system} SET weight = 11 WHERE name = 'nbmod' AND type = 'module'");
+}
+
+
+
+function __nbmod_newspage () {
+
+    drupal_set_title( t('NANOBARRIER NEWS') );
+
+    $breadcrumb = array();
+    $breadcrumb[] = l( t('Home page'), '<front>');
+    // $breadcrumb[] = l('News', 'taxonomy/term/1');
+    // $breadcrumb[] = l(drupal_get_title(), base_path() . request_uri()); // Link to current URL
+    // Set Breadcrumbs
+    drupal_set_breadcrumb($breadcrumb);
+
+    return " ";
+}
+
+
+function nbmod_frontpage () {
+
+	return '';
+}
+
+
+function ___sort_solvents($a, $b) {
+	return (int) $a->weight > (int) $b->weight;
+}
+
+function nbmod_products_page () {
+
+	global $language;
+
+    $breadcrumb = array();
+    $breadcrumb[] = l( t('Home page'), '<front>');
+    $breadcrumb[] = drupal_get_title();
+
+    drupal_set_breadcrumb($breadcrumb);
+
+
+	$vocabulary = taxonomy_vocabulary_machine_name_load('solvents');
+	$terms = entity_load('taxonomy_term', FALSE, array('vid' => $vocabulary->vid, 'language' => array('und', $language->language ) ));
+
+	// dpm($terms);
+
+	// $solvents = array();
+
+	// foreach ($terms as $term) {
+	// 	$solvents[$term->weight] = $term;
+	// }
+
+	// sort($solvents);
+
+	// dpm($solvents);
+
+	uasort($terms, '___sort_solvents');
+
+
+	return theme('nbmod_products_page', array( 'solvents' => $terms ));
+}
+
+
+
+function nbmod_testpage() {
+	$out = " ";
+
+	return "";
+
+
+
+
+
+	// menu_tree_set_path('main-menu', 'news');
+	// menu_set_active_trail('news');
+
+
+
+	// $breadcrumb = array();
+	// $breadcrumb[] = l('Home', '<front>');
+	// $breadcrumb[] = l('News', 'news');
+	// $breadcrumb[] = l(drupal_get_title(), base_path() . request_uri()); // Link to current URL
+	// Set Breadcrumbs
+	// drupal_set_breadcrumb($breadcrumb);
+
+
+	// $out .= theme(
+	//     'nbmod_sociallink',
+	//     array(
+	//         'social_type' => 'instagram'
+	//     )
+	// );
+
+	// $out .= theme(
+	//     'nbmod_sociallink',
+	//     array(
+	//         'social_type' => 'youtube'
+	//     )
+	// );
+
+
+	// $out .= theme(
+	//     'nbmod_sociallink',
+	//     array(
+	//         'social_type' => 'vk'
+	//     )
+	// );
+
+	// $out .= theme(
+	//     'nbmod_sociallink',
+	//     array(
+	//         'social_type' => 'facebook'
+	//     )
+	// );
+
+
+	return $out;
+}
+
+
+// function nbmod_module_implements_alter (&$implementations, $hook) {
+// 	// dpm($implementations);
+// 	dpm($hook);
+// }
+
+
+
+
+function nbmod_faq_page ($node) {
+
+	if( empty($node) ) return drupal_not_found();
+
+	// dpm($node);
+
+
+	if( $wrapper = entity_metadata_wrapper('node', $node) ) {
+
+	
+		$node_type = $wrapper->type->value();
+		$field_faq = $wrapper->field_faq->value();
+		
+		
+		if( $node_type !== 'product' || empty( $field_faq ) )  {
+		  $page = drupal_not_found();
+		  return $page;
+		}
+
+		drupal_set_title( $wrapper->title->value() );
+
+		$breadcrumb = array();
+		$breadcrumb[] = l(t('Front page'), '<front>');
+		$breadcrumb[] = l(t('Products'), 'products');
+		$breadcrumb[] = l($wrapper->title->value(), 'node/'.$node->nid );
+		$breadcrumb[] = t('F.A.Q.');
+
+		drupal_set_breadcrumb($breadcrumb);
+
+	}
+
+	return field_view_field('node', $node, 'field_faq', array( 'label' => 'hidden' ) );
+
+}
+
+
+
+
+
+function nbmod_menu(){
+	$items = array();
+
+	$items['frontpage'] = array(
+		'title' => " ",
+		'page callback' => 'nbmod_frontpage',
+		// 'access arguments' => array('content access'),
+		"access callback" => TRUE,
+		'type' => MENU_CALLBACK
+	);
+
+	$items['faq/%node'] = array(
+		'title' => "",
+		'page callback' => 'nbmod_faq_page',
+		'page arguments' => array(1),
+		"access callback" => TRUE,
+		'type' => MENU_CALLBACK
+
+	);
+
+	$items['products'] = array(
+		'title' => " ",
+		'page callback' => 'nbmod_products_page',
+		"access callback" => TRUE,
+		'type' => MENU_CALLBACK
+	);
+
+	$items['styles'] = array(
+		'title' => " ",
+		'page callback' => 'nbmod_faq_page',
+		// 'access arguments' => array('content access'),
+		"access callback" => TRUE,
+		'type' => MENU_CALLBACK
+	);
+
+
+
+	return $items;
+}
+
+
+
+function nbmod_block_info(){
+	$blocks = array();
+
+	$blocks['nbmod_variable_view'] = array(
+		'info' => "Переменные сайта в админке",
+		'cache' => DRUPAL_NO_CACHE,
+	);
+
+
+	$blocks['nbmod_developer_info'] = array(
+		'info' => t('Developer Information'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+
+	$blocks['nbmod_copyright'] = array(
+		'info' => t('Copyright Information'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+
+
+	$blocks['nbmod_slider'] = array(
+		'info' => t('Slider'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+
+
+
+	$blocks['nbmod_cart'] = array(
+		'info' => t('Shopping cart'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+
+	$blocks['nbmod_add'] = array(
+		'info' => t('Add to cart'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+
+
+
+	$blocks['nbmod_lang_selector'] = array(
+		'info' => t('Nanobarrier language switcher block.'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+
+
+
+	$blocks['nbmod_monthly_archive'] = array(
+		'info' => t('Monthly archive of news.'),
+		'cache' => DRUPAL_NO_CACHE,
+	);
+
+
+	return $blocks;
+}
+
+
+function __svg_text ($text='', $locale_untranslated = FALSE) {
+
+	return "
+	<svg width='18' height='15'>
+		<defs> <linearGradient id='grad' x1='100%' y1='0' x2='100%' y2='100%'><stop offset='0%' stop-color='#2caada' /><stop offset='100%' stop-color='#2bb47e' /></linearGradient> </defs>
+		<text x='0' y='100%' " . ( $locale_untranslated ? '' : "fill='url(#grad)'"  ) .  ">{$text}</text>
+	</svg>
+	";
+
+	// '<!--[if gt IE 8]><!--><object data="image.svg" type="image/svg+xml"><!--<![endif]-->
+	// <img src="image.png">
+	// <!--[if gt IE 8]><!--></object><!--<![endif]-->'
+}
+
+
+
+function nbmod_contextual_links_view_alter(&$element, &$items) {
+
+
+	if(isset($element['#element']['#block'])) {
+
+
+		switch ($element['#element']['#block']->delta) {
+			case "nbmod_slider" :
+
+				$element['#links']['add-slide'] = array(
+					'title' => t('Create Slide'),
+					'href' => url('node/add/slide', array('absolute' => TRUE)),
+				);
+
+				break;
+
+			case 'nbmod_copyright' :
+				unset($element['#links']['block-configure']);
+
+				$element['#links']['change-copyright'] = array(
+					'title' => t('Change copyright info'),
+					'href' => url('admin/config/system/variable/edit/nbmod_copyright', array('absolute' => TRUE)),
+				);
+
+				$element['#links']['change-slogan'] = array(
+					'title' => t('Change slogan'),
+					'href' => url('admin/config/system/variable/edit/nbmod_slogan', array('absolute' => TRUE)),
+				);
+
+				break;
+
+			case '2':
+
+				$element['#links']['change-phone-label'] = array(
+					'title' => t('Change phone label'),
+					'href' => url('admin/config/system/variable/edit/nbmod_phone_1', array('absolute' => TRUE)),
+				);
+
+
+				$element['#links']['change-phone-number'] = array(
+					'title' => t('Change phone number'),
+					'href' => url('admin/config/system/variable/edit/nbmod_phone_1_full', array('absolute' => TRUE)),
+				);
+
+				$element['#links']['change-email'] = array(
+					'title' => t('Change email'),
+					'href' => url('admin/config/system/variable/edit/nbmod_email', array('absolute' => TRUE)),
+				);
+
+
+				break;
+		}
+	}
+
+
+}
+
+
+
+
+function __nbmod_cart_form($node) {
+
+	$form = array();
+
+	if( arg(0) === 'node' && is_numeric( arg(1) ) ) {
+
+
+
+		$node = node_load( arg(1) );
+
+
+		$form['type_title'] = array(
+			'#type' => 'markup',
+			'#markup' => t('Checkout'),
+
+			'#suffix' => '</h1>',
+			'#prefix' => '<h1>',
+			'#weight' => 1
+		);
+
+		$form['product_title'] = array(
+			'#type' => 'markup',
+			'#markup' => t('on @title', array( '@title' =>  $node->title ) ),
+			'#suffix' => '</h3>',
+			'#prefix' => '<h3>',
+			'#weight' => 2
+		);
+
+
+
+		$form['messages'] = array(
+			'#type' => 'markup',
+			'#markup' => '__messages__',
+			'#weight' => 3
+		);			
+	}
+
+	$view = node_view($node, 'card_form');
+	return "<form>".render($form)."</form>".render($view);	
+}
+
+
+function nbmod_taxonomy_term_presave($term) {
+
+	if( empty($term->name) && $term->vid == 5) {
+
+		$wrapper = entity_metadata_wrapper('taxonomy_term', $term);
+		$capacity = $wrapper->field_capacity->value() ;
+		$term->name = format_plural($capacity, '1 liter', '@count liters');
+
+		return $term;	
+	}
+
+	cache_clear_all('cctags_cache_block_1', 'cache', TRUE);
+}
+
+function nbmod_node_presave($node) {
+	if($node->type === 'news') cache_clear_all('cctags_cache_block_1', 'cache', TRUE);
+}
+
+function nbmod_node_delete($node) {
+	if($node->type === 'news') cache_clear_all('cctags_cache_block_1', 'cache', TRUE);
+}
+
+function nbmod_taxonomy_term_delete($term) {
+	cache_clear_all('cctags_cache_block_1', 'cache', TRUE);
+}
+
+
+
+/**
+ *  contextual links renderable object
+ */
+
+
+function _clinks_get_renderable_array($links = array(), $children = array()) {
+
+
+	$render_array =
+	  array(
+		// 'children' => $children,
+		'#type' => 'contextual_links',
+		// '#theme_wrappers' => array('contextual_container'),
+		'#contextual_links' => $links,
+		// 'content' => $children
+	);
+
+	// dpm($render_array);
+
+	return $render_array;
+	// return render($render_array);
+}
+
+
+
+
+function nbmod_menu_alter (&$items) {
+
+	$items['taxonomy/term/%taxonomy_term']['page callback'] = 'nbmod_term_page';
+	$items['taxonomy/term/%taxonomy_term']['file'] = 'nbmod_taxonomy.pages.inc';
+	$items['taxonomy/term/%taxonomy_term']['file path'] = drupal_get_path('module', 'nbmod');
+}
+
+
+
+
+function nbmod_add_to_cart_ajax_submit(&$form, $form_state, $form_id) {
+
+  	$form = drupal_rebuild_form($form['#form_id'], $form_state, $form);
+	$commands = array();
+	$commands[] = ajax_command_prepend(NULL, theme('status_messages')); // Messages output to a Drupal settings variable with registry alter
+	// $commands[] = ajax_command_append_messages();  // and appended into another area
+	$commands[] = ajax_command_replace('.' . drupal_html_class($form['#form_id']), drupal_render($form));
+	// $commands[] = ajax_command_prepend('.' . drupal_html_class($form['#form_id']),"<pre>". print_r( theme('status_messages'), true ) ."</pre>"  );
+	$commands[] = ajax_command_prepend('.' . drupal_html_class($form['#form_id']),"<div class='alert alert-success'>". t('Product added to the cart') .". <br>". l(t('Cart'), 'cart') . "</div>"  );
+	
+
+	// 
+	$commands[] = ajax_command_replace('#cart_block_wrapper > *', __show_block('nbmod', 'nbmod_cart', false, false) );
+
+
+	return array('#type' => 'ajax', '#commands' => $commands);
+
+}
+
+
+
+
+function nbmod_form_alter(&$form, &$form_state, $form_id) {
+
+
+	// dpm( $form_id );
+
+
+	if($form_id === 'taxonomy_form_term') {
+		$form['name']['#default_value'] = '';
+		$form['name']['#required'] = false;
+		$form['#validate'] = array('__taxonomy_presave_form', $form['#validate'][0]);
+	}
+
+
+	elseif (commerce_form_callback($form_id, $form_state) == "commerce_cart_add_to_cart_form") {
+
+		// dpm( $form['submit'] );
+
+
+		$ajax_wrapper = str_replace('_', '-', $form['#form_id']);
+
+
+		$form['submit']['#ajax'] = array(
+			'callback' => 'nbmod_add_to_cart_ajax_submit'
+		);
+
+		// if( arg(0) === 'node' && is_numeric( arg(1) ) ) {
+
+
+
+		// 	$node = node_load( arg(1) );
+
+
+		// 	$form['type_title'] = array(
+		// 		'#type' => 'markup',
+		// 		'#markup' => t('Checkout'),
+
+		// 		'#suffix' => '</h1>',
+		// 		'#prefix' => '<h1>',
+		// 		'#weight' => -1
+		// 	);
+
+		// 	$form['product_title'] = array(
+		// 		'#type' => 'markup',
+		// 		'#markup' => t('on @title', array( '@title' =>  $node->title ) ),
+		// 		'#suffix' => '</h3>',
+		// 		'#prefix' => '<h3>',
+		// 		'#weight' => -1
+		// 	);
+
+
+
+		// 	$form['messages'] = array(
+		// 		'#type' => 'markup',
+		// 		'#markup' => '__messages__',
+		// 		'#weight' => -1
+		// 	);
+
+
+
+			
+		// }
+
+
+		// dpm(
+
+		// 	$form_state['line_item']
+		// );
+
+
+		// dpm( $form );
+
+
+
+		$letter_pad_class = "nums4";
+
+		$product_ids = commerce_cart_add_to_cart_form_product_ids( $form_state['line_item'] );
+  		// $products = commerce_product_load_multiple($product_ids, array('status' => 1));
+
+
+		// dpm( $form['product_id']['#options'] );
+		// dpm( $product_ids );
+
+			if( array_key_exists('#options', $form['product_id']) &&  count( $form['product_id']['#options'] ) > 1 ) {
+
+
+				$products = array_keys($form['product_id']['#options']);
+
+
+				$products = commerce_product_load_multiple($product_ids, array('status' => 1));
+				$opts = array(); $label_capacity = 'liters';
+
+
+				foreach ($products as $product_id => $product) {
+	        		$product_wrapper = entity_metadata_wrapper('commerce_product', $product);
+
+	        		$capacity = $product_wrapper->field_capacity_taxonomy->value();
+
+	        		if( !empty($capacity) ) {
+
+		        		$term_wrapper = entity_metadata_wrapper('taxonomy_term', $capacity);
+		        		$capacity = $term_wrapper->field_capacity->value();
+
+		        		$opts[$product_id] = 1 - $capacity < 0 ? (int) $capacity : $capacity;
+		        		if( $form_state['default_product']->product_id ==  $product_id ) $letter_pad_class = 'nums'.strlen( ''.$capacity );
+		        		
+	        		}
+
+				}
+
+				$form['product_id']['#options'] = $opts;
+				$form['product_id']['#attributes'] = array( 'class' => array('counter_item' ) );
+				$form['product_id']['#title'] = t('The volume of canisters, @amount_type', array( '@amount_type' => t($label_capacity) ));
+
+			} 
+
+
+
+
+
+			$form['#attached']['js'] = array(
+			  	drupal_get_path('module', 'nbmod') . '/js/counter_items.js',
+			);
+
+
+
+			if (isset($form_state['default_product']->commerce_price)){
+
+				$formatter = field_info_instance('commerce_product', 'commerce_price', $form_state['default_product']->type);
+				$price_display = field_view_field('commerce_product', $form_state['default_product'], 'commerce_price', $formatter['display']['default']);
+
+
+
+				$product_wrapper = entity_metadata_wrapper('commerce_product', $form_state['default_product']);
+				$price = $product_wrapper->commerce_price->value();
+				$currency = commerce_currency_load($price['currency_code']);
+				drupal_add_js( array('counterField' => array('currencie' => $currency['symbol'] )), 'setting' );
+
+
+
+				$form['price'] = array(
+					'#type' => 'markup',	
+					'#markup' => '<label for="">'. t('Price') .'</label>' . render( $price_display ) ,	
+					'#title' => t('Price'),
+					'#weight' => 400,
+					'#suffix' => '</div>',
+					'#prefix' => '<div class="price_field form-item">',
+				);
+			}
+
+
+
+
+			// dpm($form); product_id
+			// dpm($form_state);
+
+		$form['quantity']['#title'] = t('Number of canisters');
+		$form['quantity']['#attributes'] = array( 'class' => array('counter_item') );
+
+
+
+
+
+		$form['submit']['#attributes'] = array(
+			'class' => array( 'btn-default' )
+		);
+
+		$form['submit']['#weight'] = 500;
+
+	}
+
+}
+
+
+
+function nbmod_node_view_alter(&$build) {
+	// dpm($build);
+}
+
+function __taxonomy_presave_form(&$form, $form_state){
+	// dpm($form['field_capacity']);
+	// dpm($form_state['values']['field_capacity']['und'][0]['value']);
+
+	// dpm($form_state['values']);
+
+	// $capacity = $form_state['values']['field_capacity']['und'][0]['value'];
+	// $form_state['values']['name'] = format_plural($capacity, '1 liter', '@count liters');
+	// $form_state['input']['name'] = format_plural($capacity, '1 liter', '@count liters');
+	
+	// dpm($form_state['values']);
+	// dpm($form_state);
+
+}
+
+
+
+
+function nbmod_block_view($delta = '') {
+
+	global $language;
+	$block = array();
+
+	switch($delta) {
+
+		case "nbmod_monthly_archive" :
+
+			global $databases;
+
+			$block['title'] = t('ARCHIVE');
+
+			$query = db_select('node', 'n');
+			$query->addExpression('COUNT( n.nid )', 'count');
+
+			$groupQ = '';
+
+			if($databases['default']['default']['driver'] === 'sqlite') {
+
+				$groupQ = "strftime( '%Y%m', dtime )";
+				$query->addExpression('strftime( \'%Y%m\', datetime(  n.created, \'unixepoch\', \'localtime\'  ) )', 'dtime');
+			}
+
+			else {
+
+				$groupQ = "DATE_FORMAT( n.created, '%Y%m' )";
+				//$query->addExpression('DATE_FORMAT( \'%Y%m\', datetime(  n.created, \'unixepoch\', \'localtime\'  ) )', 'dtime');
+			}
+
+
+			$nodes = $query
+				->fields('n', array('created'))
+				->condition('n.type', 'news')
+				->condition('n.language', array( $language->language, 'und' ))
+				->orderBy('n.created', 'DESC')
+				->groupBy($groupQ)
+
+				->range(0, 24 )
+				->execute()
+			// ->fetchAll()
+			;
+
+
+			$items = array();
+			while($node = $nodes->fetchObject() ) {
+
+				dpm($node);
+
+				$month = $language->language === 'ru' ? __get_month( date('n', $node->created ) )  : date('F', $node->created );
+				$count_items = "<span class=\"count\">$node->count</span>";
+				$items[] = l(
+
+					$month . ' ' . format_date($node->created, 'custom', 'Y') . $count_items, 'news/' . date('Ym', $node->created), array( 'html' => TRUE )
+
+				) ;
+			}
+
+			$block['content'] = count( $items ) ?
+
+				theme('item_list', array( 'items' => $items , 'type' => 'nav' )) :
+				t("The site news section on this language has no articles.");
+
+			return $block;
+
+		case 'nbmod_lang_selector':
+			if (drupal_multilingual()) {
+				$path = drupal_is_front_page() ? '<front>' : $_GET['q'];
+				$links = language_negotiation_get_switch_links('language', $path);
+
+
+				if (isset($links->links)) {
+					$class = "language-switcher-{$links->provider}";
+					$output = "";
+					foreach ($links->links as $key => $link) {
+
+						$link_text = $link['language']->language !== $language->language ? __svg_text($key, in_array('locale-untranslated', $link['attributes']['class'])) : $key;
+						$link['html'] = TRUE;
+
+						$href = array_key_exists('href', $link) ? $link['href'] : '';
+						$output .= l($link_text, $href, $link);
+					}
+
+					$block['content'] = "<div class='language-switcher-{$links->provider}'> {$output} </div>";
+				}
+			}
+
+			$block['subject'] = t('Languages');
+
+			return $block;
+
+		case 'nbmod_developer_info' :
+
+			$block['content'] = theme('nbmod_devinfoblock', array());
+			$block['subject'] = t('Developer Information');
+			return $block;
+
+
+		case 'nbmod_copyright' :
+
+			$block['content'] = theme('nbmod_copyright', array());
+			$block['subject'] = t('Copyright Information');
+			return $block;
+
+
+		case 'nbmod_variable_view' :
+
+			$old_title = drupal_get_title();
+
+			module_load_include('inc', 'variable_admin', 'variable_admin');
+			$build = variable_admin_page_module('nbmod');
+			drupal_set_title($old_title);
+			$build['message']['#markup'] = '';
+
+			$block['subject'] = t('Редактировать информацию на сайте');
+			$block['content'] = drupal_render($build);
+
+			return $block;
+
+
+		case 'nbmod_slider' :
+
+			$default_video = variable_get('nbmod_slider_video');
+			$video = variable_get('nbmod_slider_video_'.$language->language, $default_video);
+
+
+			$query = new EntityFieldQuery();
+
+			$query->entityCondition('entity_type', 'node')
+				->propertyCondition('status', 1)
+				->propertyCondition('type', array('slide'))
+				->propertyCondition('language', array('und', $language->language))
+				->propertyOrderBy('created', 'DESC')
+				// ->range(0, 5)
+			;
+
+			$result = $query->execute();
+			$slides = !empty($result['node']) ? node_load_multiple( array_keys($result['node']) ) : array();
+
+
+
+			// $slides = array();
+
+			// foreach ( $nodes as $nid => $node ) {
+			//     $wrapper = entity_metadata_wrapper('node', $node);
+
+			//     $slides[] = array(
+			//         'title' => $wrapper->title->value(),
+			//         'caption' => $wrapper->body->value(),
+			//         'image' => $wrapper->field_slide_photo->value(),
+			//         'link' => $wrapper->field_href->value(),
+			//         'nid' => $nid
+			//     );
+			// }
+
+			$block['content'] = theme('nbmod_slider',
+
+				array(
+					'slider_id' => $delta.'_1' ,
+					'slides' => $slides,
+
+					'video' => empty($video) ? $default_video : $video,
+				)
+			);
+
+			$block['subject'] = t('Developer Information');
+
+
+			return $block;
+
+
+
+		case 'nbmod_cart':
+
+			$header = '<div class="block-title ">'.t("YOUR CART").'</div>';
+			$onSmall = '';
+			$onLarge = '';
+
+			global $user;
+
+			$quantity = 0;
+
+
+
+			if ($order = commerce_cart_order_load($user->uid)) {
+
+				$wrapper = entity_metadata_wrapper('commerce_order', $order);
+				$quantity = commerce_line_items_quantity($wrapper->commerce_line_items, commerce_product_line_item_types());
+				$total = commerce_line_items_total($wrapper->commerce_line_items, commerce_product_line_item_types());
+			}
+
+			if ($quantity > 0) {
+
+
+				$title = format_plural(
+					$quantity,
+					'1 goods',
+					'@count goods'
+				);
+
+				$onLarge .= l(
+					'<span class="basket_ico"></span>'.$title,
+					'cart',
+					array( 'html' => TRUE )
+				);
+
+				$onLarge .= ' '.t( 'in the amount of @amount', array( '@amount' => commerce_currency_format($total['amount'], $total['currency_code']) ) );
+				
+
+
+				$onSmall .= l(
+					'<span class="basket_ico"></span> ('.$quantity .')',
+					'cart',
+					array( 'html' => TRUE )
+				);
+
+				$onSmall .= ' '.t( ' of @amount', array( '@amount' => commerce_currency_format($total['amount'], $total['currency_code']) ) );
+
+			}
+
+			else {
+				$onLarge .= '<span class="basket_ico"></span> '.t('You have no items in your shopping cart.');
+				$onSmall .= '<span class="basket_ico"></span> (0)';
+			}
+
+
+			
+			$onSmall = '<div class="visible-xs">'
+				. $onSmall .
+			'</div>';
+
+			$onLarge = '<div class="hidden-xs">'
+				. $onLarge .
+			'</div>';
+
+
+			$block['content'] = $header . $onSmall . $onLarge;
+			$block['subject'] = t('YOUR CART');
+
+			return $block;
+
+
+		return $block;
+	}
+
+	return $block;
+
+}
+
+
+
+
+
+
+
+function theme_nbmod_termin (&$variables) {
+
+    $tid = $variables['tid'];
+    if( empty($tid) ) return 'Taxonomy id is empty';
+
+    global $language;
+    $term = taxonomy_term_load($tid);
+    $translated_term = i18n_taxonomy_term_get_translation($term, $language->language);
+    $term = !empty($translated_term) ? $translated_term : $term;
+
+    $wrapper = entity_metadata_wrapper('taxonomy_term', $term);
+
+    $title = $wrapper->name->value();
+    $description = $wrapper->description->value();
+    $style = $wrapper->field_type->value();
+
+
+    return theme('nbmod_case',
+        array(
+            'tid' => $term->tid,
+            'title' => $title,
+            'description' => $description,
+            'style' => $style
+        )
+    );
+}
+
+
+
+
+function nbmod_theme($existing, $type, $theme, $path) {
+	return array(
+
+		'nbmod_devinfoblock' => array(
+			'variables' => array(),
+			'template' => 'nbmod-devinfoblock',
+			'path' => drupal_get_path('module', 'nbmod') .'/templates'
+		),
+
+		'nbmod_copyright' => array(
+			'variables' => array(),
+			'template' => 'nbmod-copyright',
+			'path' => drupal_get_path('module', 'nbmod') .'/templates'
+		),
+
+
+		'nbmod_products_page' => array(
+			'variables' => array( 'solvents' => array() ),
+			'template' => 'nbmod-productspage',
+			'path' => drupal_get_path('module', 'nbmod') .'/templates'
+		),
+
+		'nbmod_sociallink' => array(
+			'variables' => array( 'social_type' => '', 'link' => ''),
+			'template' => 'nbmod-sociallink',
+			'path' => drupal_get_path('module', 'nbmod') .'/templates'
+		),
+
+		'nbmod_slider' => array(
+			'variables' => array( 'slider_type' => '', 'url' => '', 'slider_id' => 'default_id', 'slides' => array(), 'video' => ''),
+			'template' => 'nbmod-slider',
+			'path' => drupal_get_path('module', 'nbmod') .'/templates'
+		),
+
+
+        'nbmod_case' => array(
+            'variables' => array("title" => "", "description" => "", "style" => "", "tid" => ''),
+            'template' => 'nbmod-case',
+            'path' => drupal_get_path('module', 'nbmod') .'/templates'
+        ),
+
+
+		'nbmod_termin' => array(
+			'variables' => array("tid" => ""),
+		),
+
+
+	);
+}
+
+
+
+function nbmod_block_configure($delta='') {
+
+	$form = array();
+	// The $delta parameter tells us which block is being configured.
+	// In this example, we'll allow the administrator to customize
+	// the text of the 'configurable text string' block defined in this module.
+
+	if ($delta == 'nbmod_slider') {
+		// All we need to provide is the specific configuration options for our
+		// block. Drupal will take care of the standard block configuration options
+		// (block title, page visibility, etc.) and the save button.
+
+
+		$form['slider_settings'] = array(
+			'#type' => 'fieldset',
+			'#title' => t('Embedded video from youtube, vimeo or other video-sharing websites.'),
+		);
+
+		$default_video = variable_get('nbmod_slider_video');
+		$russian = variable_get('nbmod_slider_video_ru');
+		$english = variable_get('nbmod_slider_video_en');
+
+		$russian = empty($russian) ? $default_video : $russian;
+		$english = empty($english) ? $default_video : $english;
+
+
+		$form['slider_settings']['nbmod_slider_video_en'] = array(
+			'#type' => 'textarea',
+			'#title' => t('English'),
+			'#size' => 60,
+			'#description' => t('Place code. Like this: <em></em> &lt;iframe width="380" height="245" src="//www.youtube.com/embed/dS5aXe5lFC0" frameborder="0" allowfullscreen&gt;&lt;/iframe&gt;'),
+			'#default_value' => $english,
+		);
+
+
+		$form['slider_settings']['nbmod_slider_video_ru'] = array(
+			'#type' => 'textarea',
+			'#title' => t('Russian'),
+			'#size' => 60,
+			'#description' => t('Place code. Like this: <em></em> &lt;iframe width="380" height="245" src="//www.youtube.com/embed/dS5aXe5lFC0" frameborder="0" allowfullscreen&gt;&lt;/iframe&gt;'),
+			'#default_value' => $russian,
+		);
+
+
+	}
+
+	return $form;
+
+}
+
+
+function nbmod_block_save($delta = '', $edit = array()) {
+
+	if ($delta == 'nbmod_slider') {
+
+		$english = $edit['nbmod_slider_video_en'];
+		$russian = $edit['nbmod_slider_video_ru'];
+		variable_set('nbmod_slider_video', $english);
+		variable_set('nbmod_slider_video_en', $english);
+		variable_set('nbmod_slider_video_ru', $russian);
+
+	}
+
+}
+
+
+
+
